@@ -22,6 +22,7 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(runCmd)
+	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(supervisorCmd)
 	rootCmd.AddCommand(psCmd)
 	rootCmd.AddCommand(logsCmd)
@@ -30,4 +31,7 @@ func init() {
 	rootCmd.AddCommand(rmCmd)
 	rootCmd.AddCommand(attachCmd)
 	rootCmd.AddCommand(cleanCmd)
+	rootCmd.AddCommand(restartCmd)
+	rootCmd.AddCommand(inspectCmd)
+	rootCmd.AddCommand(waitCmd)
 }

@@ -3,15 +3,16 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/exec"
+	"time"
 
 	"github.com/dusk125/j/job"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var runCmd = &cobra.Command{
 	Use:   "run [flags] -- CMD [ARGS...]",
-	Short: "Start a background job",
+	Short: "Run a job in the foreground",
 	Args:  cobra.MinimumNArgs(1),
 	RunE:  runRun,
 }
@@ -25,62 +26,152 @@ func init() {
 }
 
 func runRun(cmd *cobra.Command, args []string) error {
-	if err := job.EnsureJobsDir(); err != nil {
-		return fmt.Errorf("creating state directory: %w", err)
+	name, _, err := startJob(runName, runDir, args)
+	if err != nil {
+		return err
 	}
 
-	name := runName
-	if name == "" {
-		name = job.GenerateName()
+	// Wait briefly for supervisor to set PID and create FIFO
+	time.Sleep(50 * time.Millisecond)
+
+	fd := int(os.Stdin.Fd())
+	isTTY := term.IsTerminal(fd)
+
+	if isTTY {
+		return foregroundAttach(name)
+	}
+	return foregroundFollow(name)
+}
+
+// foregroundAttach runs like attach but exits when the job does.
+func foregroundAttach(name string) error {
+	meta, err := job.ReadMeta(job.MetaPath(name))
+	if err != nil {
+		return fmt.Errorf("job %q not found", name)
 	}
 
-	if job.JobExists(name) {
-		return fmt.Errorf("job %q already exists", name)
+	fifo, err := os.OpenFile(job.StdinPipePath(name), os.O_WRONLY, 0)
+	if err != nil {
+		return fmt.Errorf("opening stdin pipe: %w", err)
+	}
+	defer fifo.Close()
+
+	fd := int(os.Stdin.Fd())
+	oldState, err := term.MakeRaw(fd)
+	if err != nil {
+		return fmt.Errorf("setting raw mode: %w", err)
+	}
+	defer term.Restore(fd, oldState)
+
+	writeStr := func(s string) {
+		os.Stdout.WriteString(s)
 	}
 
-	dir := runDir
-	if dir == "" {
-		var err error
-		dir, err = os.Getwd()
-		if err != nil {
-			return fmt.Errorf("getting working directory: %w", err)
+	done := make(chan struct{})
+	jobExited := make(chan int, 1)
+
+	// Follow logs, exit when job exits
+	go attachFollowUntilExit(os.Stdout, name, done, jobExited)
+
+	// Read stdin and forward to FIFO
+	ctrlCCount := 0
+	var lastCtrlC time.Time
+	buf := make([]byte, 256)
+	for {
+		// Check if job exited between reads
+		select {
+		case code := <-jobExited:
+			close(done)
+			writeStr(fmt.Sprintf("\r\nJob exited with code %d.\r\n", code))
+			os.Exit(code)
+		default:
+		}
+
+		// Use a goroutine for non-blocking read so we can check jobExited
+		readCh := make(chan readResult, 1)
+		go func() {
+			n, err := os.Stdin.Read(buf)
+			readCh <- readResult{n, err}
+		}()
+
+		select {
+		case code := <-jobExited:
+			close(done)
+			writeStr(fmt.Sprintf("\r\nJob exited with code %d.\r\n", code))
+			os.Exit(code)
+		case r := <-readCh:
+			if r.err != nil {
+				close(done)
+				return nil
+			}
+			n := r.n
+
+			written := 0
+			detach := false
+			for i := 0; i < n; i++ {
+				switch buf[i] {
+				case 0x11: // Ctrl+Q — detach
+					if i > written {
+						fifo.Write(buf[written:i])
+					}
+					close(done)
+					writeStr("\r\nDetached from job " + name + ".\r\n")
+					return nil
+
+				case 0x03: // Ctrl+C — interrupt / kill
+					if i > written {
+						fifo.Write(buf[written:i])
+					}
+					written = i + 1
+
+					if time.Since(lastCtrlC) > 2*time.Second {
+						ctrlCCount = 0
+					}
+					ctrlCCount++
+					lastCtrlC = time.Now()
+
+					if ctrlCCount >= 3 {
+						signalJob(meta.PID, true)
+						close(done)
+						writeStr("\r\nKilled job " + name + ".\r\n")
+						detach = true
+					} else {
+						signalJob(meta.PID, false)
+						remaining := 3 - ctrlCCount
+						writeStr(fmt.Sprintf("\r\nInterrupted. %d more Ctrl+C to kill.\r\n", remaining))
+					}
+				}
+				if detach {
+					break
+				}
+			}
+			if detach {
+				return nil
+			}
+			if written < n {
+				fifo.Write(buf[written:n])
+			}
 		}
 	}
+}
 
-	if err := job.CreateJobDir(name); err != nil {
-		return fmt.Errorf("creating job directory: %w", err)
+// foregroundFollow follows logs without stdin forwarding (non-TTY mode).
+func foregroundFollow(name string) error {
+	done := make(chan struct{})
+	jobExited := make(chan int, 1)
+
+	go attachFollowUntilExit(os.Stdout, name, done, jobExited)
+
+	code := <-jobExited
+	close(done)
+	if code != 0 {
+		fmt.Fprintf(os.Stderr, "Job exited with code %d.\n", code)
 	}
-
-	meta := &job.Meta{
-		Name:    name,
-		Command: args,
-		Dir:     dir,
-		Status:  "running",
-	}
-	if err := job.WriteMeta(job.MetaPath(name), meta); err != nil {
-		return fmt.Errorf("writing metadata: %w", err)
-	}
-
-	// Find our own executable to spawn the supervisor
-	self, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("finding executable: %w", err)
-	}
-
-	supervisor := exec.Command(self, "_supervisor", name)
-	supervisor.Dir = dir
-	supervisor.Stdin = nil
-	supervisor.Stdout = nil
-	supervisor.Stderr = nil
-	supervisor.SysProcAttr = sysProcAttr()
-
-	if err := supervisor.Start(); err != nil {
-		job.RemoveJob(name)
-		return fmt.Errorf("starting supervisor: %w", err)
-	}
-
-	job.WriteSupervisorPID(name, supervisor.Process.Pid)
-
-	fmt.Printf("Started job %q (supervisor pid %d)\n", name, supervisor.Process.Pid)
+	os.Exit(code)
 	return nil
+}
+
+type readResult struct {
+	n   int
+	err error
 }

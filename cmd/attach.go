@@ -61,78 +61,106 @@ func runAttach(cmd *cobra.Command, args []string) error {
 	writeStr("Attached to job " + name + ". Ctrl+Q: detach | Ctrl+C: interrupt (x3 to kill)\r\n")
 
 	done := make(chan struct{})
+	jobExited := make(chan int, 1)
 
-	// Follow logs in a goroutine
-	go attachFollow(os.Stdout, name, done)
+	// Follow logs in a goroutine, signal when job exits
+	go attachFollowUntilExit(os.Stdout, name, done, jobExited)
 
 	// Read stdin and forward to FIFO
 	ctrlCCount := 0
 	var lastCtrlC time.Time
 	buf := make([]byte, 256)
 	for {
-		n, err := os.Stdin.Read(buf)
-		if err != nil {
-			break
+		select {
+		case code := <-jobExited:
+			close(done)
+			writeStr(fmt.Sprintf("\r\nJob exited with code %d.\r\n", code))
+			return nil
+		default:
 		}
 
-		written := 0
-		for i := 0; i < n; i++ {
-			switch buf[i] {
-			case 0x11: // Ctrl+Q — detach
-				if i > written {
-					fifo.Write(buf[written:i])
-				}
+		readCh := make(chan readResult, 1)
+		go func() {
+			n, err := os.Stdin.Read(buf)
+			readCh <- readResult{n, err}
+		}()
+
+		select {
+		case code := <-jobExited:
+			close(done)
+			writeStr(fmt.Sprintf("\r\nJob exited with code %d.\r\n", code))
+			return nil
+		case r := <-readCh:
+			if r.err != nil {
 				close(done)
 				writeStr("\r\nDetached from job " + name + ".\r\n")
 				return nil
+			}
+			n := r.n
 
-			case 0x03: // Ctrl+C — interrupt / kill
-				// Flush any bytes before this Ctrl+C
-				if i > written {
-					fifo.Write(buf[written:i])
-				}
-				written = i + 1
-
-				// Reset counter if more than 2 seconds since last Ctrl+C
-				if time.Since(lastCtrlC) > 2*time.Second {
-					ctrlCCount = 0
-				}
-				ctrlCCount++
-				lastCtrlC = time.Now()
-
-				if ctrlCCount >= 3 {
-					proc, err := os.FindProcess(meta.PID)
-					if err == nil {
-						proc.Signal(syscall.SIGKILL)
+			written := 0
+			detach := false
+			for i := 0; i < n; i++ {
+				switch buf[i] {
+				case 0x11: // Ctrl+Q — detach
+					if i > written {
+						fifo.Write(buf[written:i])
 					}
 					close(done)
-					writeStr("\r\nKilled job " + name + ".\r\n")
+					writeStr("\r\nDetached from job " + name + ".\r\n")
 					return nil
-				}
 
-				// Send SIGINT to the child process
-				proc, err := os.FindProcess(meta.PID)
-				if err == nil {
-					proc.Signal(syscall.SIGINT)
-				}
+				case 0x03: // Ctrl+C — interrupt / kill
+					if i > written {
+						fifo.Write(buf[written:i])
+					}
+					written = i + 1
 
-				remaining := 3 - ctrlCCount
-				writeStr(fmt.Sprintf("\r\nInterrupted. %d more Ctrl+C to kill.\r\n", remaining))
+					if time.Since(lastCtrlC) > 2*time.Second {
+						ctrlCCount = 0
+					}
+					ctrlCCount++
+					lastCtrlC = time.Now()
+
+					if ctrlCCount >= 3 {
+						signalJob(meta.PID, true)
+						close(done)
+						writeStr("\r\nKilled job " + name + ".\r\n")
+						detach = true
+					} else {
+						signalJob(meta.PID, false)
+						remaining := 3 - ctrlCCount
+						writeStr(fmt.Sprintf("\r\nInterrupted. %d more Ctrl+C to kill.\r\n", remaining))
+					}
+				}
+				if detach {
+					break
+				}
+			}
+			if detach {
+				return nil
+			}
+			if written < n {
+				fifo.Write(buf[written:n])
 			}
 		}
-		// Write any remaining bytes after the last special key
-		if written < n {
-			fifo.Write(buf[written:n])
-		}
 	}
-
-	close(done)
-	writeStr("\r\nDetached from job " + name + ".\r\n")
-	return nil
 }
 
-// attachFollow streams new log lines to the writer with \r\n line endings for raw mode.
-func attachFollow(w io.Writer, name string, stop <-chan struct{}) {
+func signalJob(pid int, kill bool) {
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		return
+	}
+	if kill {
+		proc.Signal(syscall.SIGKILL)
+	} else {
+		proc.Signal(syscall.SIGINT)
+	}
+}
+
+// attachFollowUntilExit streams log lines and signals jobExited when the job finishes.
+func attachFollowUntilExit(w io.Writer, name string, stop <-chan struct{}, jobExited chan<- int) {
 	var stdoutOffset, stderrOffset int64
 
 	for {
@@ -157,9 +185,32 @@ func attachFollow(w io.Writer, name string, stop <-chan struct{}) {
 				return entries[i].ts < entries[j].ts
 			})
 			for _, e := range entries {
-				// Use \r\n for raw terminal mode
 				fmt.Fprint(w, e.line+"\r\n")
 			}
+		}
+
+		// Check if job has exited
+		meta, err := job.ReadMeta(job.MetaPath(name))
+		if err == nil && meta.Status != "running" {
+			// Drain any remaining log entries
+			time.Sleep(50 * time.Millisecond)
+			outs, _ := readNewLogEntries(job.StdoutLogPath(name), stdoutOffset)
+			errs, _ := readNewLogEntries(job.StderrLogPath(name), stderrOffset)
+			remaining := append(outs, errs...)
+			if len(remaining) > 0 {
+				sort.SliceStable(remaining, func(i, j int) bool {
+					return remaining[i].ts < remaining[j].ts
+				})
+				for _, e := range remaining {
+					fmt.Fprint(w, e.line+"\r\n")
+				}
+			}
+			code := 0
+			if meta.ExitCode != nil {
+				code = *meta.ExitCode
+			}
+			jobExited <- code
+			return
 		}
 
 		time.Sleep(50 * time.Millisecond)

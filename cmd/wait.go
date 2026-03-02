@@ -1,0 +1,56 @@
+package cmd
+
+import (
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/dusk125/j/job"
+	"github.com/spf13/cobra"
+)
+
+var waitCmd = &cobra.Command{
+	Use:   "wait NAME",
+	Short: "Wait for a job to exit and return its exit code",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runWait,
+}
+
+func runWait(cmd *cobra.Command, args []string) error {
+	name := args[0]
+
+	meta, err := job.ReadMeta(job.MetaPath(name))
+	if err != nil {
+		return fmt.Errorf("job %q not found", name)
+	}
+
+	// Already exited
+	if meta.Status != "running" {
+		return exitWithMeta(meta)
+	}
+
+	// Poll until exit
+	for {
+		time.Sleep(100 * time.Millisecond)
+		meta, err = job.ReadMeta(job.MetaPath(name))
+		if err != nil {
+			return fmt.Errorf("reading job state: %w", err)
+		}
+		job.RefreshStatus(meta)
+		if meta.Status != "running" {
+			return exitWithMeta(meta)
+		}
+	}
+}
+
+func exitWithMeta(meta *job.Meta) error {
+	code := 0
+	if meta.ExitCode != nil {
+		code = *meta.ExitCode
+	}
+	if code != 0 {
+		fmt.Fprintf(os.Stderr, "Job %q exited with code %d\n", meta.Name, code)
+	}
+	os.Exit(code)
+	return nil
+}
