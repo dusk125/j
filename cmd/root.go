@@ -29,4 +29,5 @@ func init() {
 	rootCmd.AddCommand(killCmd)
 	rootCmd.AddCommand(rmCmd)
 	rootCmd.AddCommand(attachCmd)
+	rootCmd.AddCommand(cleanCmd)
 }
