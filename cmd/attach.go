@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/dusk125/j/job"
@@ -57,7 +58,7 @@ func runAttach(cmd *cobra.Command, args []string) error {
 		os.Stdout.WriteString(s)
 	}
 
-	writeStr("Attached to job " + name + ". Press Ctrl+Q to detach.\r\n")
+	writeStr("Attached to job " + name + ". Ctrl+Q: detach | Ctrl+C: interrupt (x3 to kill)\r\n")
 
 	done := make(chan struct{})
 
@@ -65,25 +66,64 @@ func runAttach(cmd *cobra.Command, args []string) error {
 	go attachFollow(os.Stdout, name, done)
 
 	// Read stdin and forward to FIFO
+	ctrlCCount := 0
+	var lastCtrlC time.Time
 	buf := make([]byte, 256)
 	for {
 		n, err := os.Stdin.Read(buf)
 		if err != nil {
 			break
 		}
-		// Scan for Ctrl+Q (0x11)
+
+		written := 0
 		for i := 0; i < n; i++ {
-			if buf[i] == 0x11 {
-				// Write everything before the detach key
-				if i > 0 {
-					fifo.Write(buf[:i])
+			switch buf[i] {
+			case 0x11: // Ctrl+Q — detach
+				if i > written {
+					fifo.Write(buf[written:i])
 				}
 				close(done)
 				writeStr("\r\nDetached from job " + name + ".\r\n")
 				return nil
+
+			case 0x03: // Ctrl+C — interrupt / kill
+				// Flush any bytes before this Ctrl+C
+				if i > written {
+					fifo.Write(buf[written:i])
+				}
+				written = i + 1
+
+				// Reset counter if more than 2 seconds since last Ctrl+C
+				if time.Since(lastCtrlC) > 2*time.Second {
+					ctrlCCount = 0
+				}
+				ctrlCCount++
+				lastCtrlC = time.Now()
+
+				if ctrlCCount >= 3 {
+					proc, err := os.FindProcess(meta.PID)
+					if err == nil {
+						proc.Signal(syscall.SIGKILL)
+					}
+					close(done)
+					writeStr("\r\nKilled job " + name + ".\r\n")
+					return nil
+				}
+
+				// Send SIGINT to the child process
+				proc, err := os.FindProcess(meta.PID)
+				if err == nil {
+					proc.Signal(syscall.SIGINT)
+				}
+
+				remaining := 3 - ctrlCCount
+				writeStr(fmt.Sprintf("\r\nInterrupted. %d more Ctrl+C to kill.\r\n", remaining))
 			}
 		}
-		fifo.Write(buf[:n])
+		// Write any remaining bytes after the last special key
+		if written < n {
+			fifo.Write(buf[written:n])
+		}
 	}
 
 	close(done)
