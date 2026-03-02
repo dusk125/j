@@ -84,8 +84,10 @@ func foregroundAttach(name string) error {
 		select {
 		case code := <-jobExited:
 			close(done)
-			writeStr(fmt.Sprintf("\r\nJob exited with code %d.\r\n", code))
-			os.Exit(code)
+			if code != 0 {
+				writeStr(fmt.Sprintf("\r\nJob exited with code %d.\r\n", code))
+			}
+			return exitCodeError{code}
 		default:
 		}
 
@@ -99,8 +101,10 @@ func foregroundAttach(name string) error {
 		select {
 		case code := <-jobExited:
 			close(done)
-			writeStr(fmt.Sprintf("\r\nJob exited with code %d.\r\n", code))
-			os.Exit(code)
+			if code != 0 {
+				writeStr(fmt.Sprintf("\r\nJob exited with code %d.\r\n", code))
+			}
+			return exitCodeError{code}
 		case r := <-readCh:
 			if r.err != nil {
 				close(done)
@@ -169,8 +173,7 @@ func foregroundFollow(name string) error {
 	if code != 0 {
 		fmt.Fprintf(os.Stderr, "Job exited with code %d.\n", code)
 	}
-	os.Exit(code)
-	return nil
+	return exitCodeError{code}
 }
 
 type readResult struct {

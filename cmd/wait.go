@@ -51,6 +51,5 @@ func exitWithMeta(meta *job.Meta) error {
 	if code != 0 {
 		fmt.Fprintf(os.Stderr, "Job %q exited with code %d\n", meta.Name, code)
 	}
-	os.Exit(code)
-	return nil
+	return exitCodeError{code}
 }
