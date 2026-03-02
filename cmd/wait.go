@@ -16,6 +16,12 @@ var waitCmd = &cobra.Command{
 	RunE:  runWait,
 }
 
+var waitAutoRm bool
+
+func init() {
+	waitCmd.Flags().BoolVar(&waitAutoRm, "rm", false, "Remove job after it exits")
+}
+
 func runWait(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
@@ -26,6 +32,9 @@ func runWait(cmd *cobra.Command, args []string) error {
 
 	// Already exited
 	if meta.Status != "running" {
+		if waitAutoRm {
+			job.RemoveJob(name)
+		}
 		return exitWithMeta(meta)
 	}
 
@@ -38,6 +47,9 @@ func runWait(cmd *cobra.Command, args []string) error {
 		}
 		job.RefreshStatus(meta)
 		if meta.Status != "running" {
+			if waitAutoRm {
+				job.RemoveJob(name)
+			}
 			return exitWithMeta(meta)
 		}
 	}

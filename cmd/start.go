@@ -18,14 +18,16 @@ var startCmd = &cobra.Command{
 
 var startName string
 var startDir string
+var startAutoRm bool
 
 func init() {
 	startCmd.Flags().StringVar(&startName, "name", "", "Job name (auto-generated if empty)")
 	startCmd.Flags().StringVar(&startDir, "dir", "", "Working directory (default: current directory)")
+	startCmd.Flags().BoolVar(&startAutoRm, "rm", false, "Remove job after it exits")
 }
 
 func runStart(cmd *cobra.Command, args []string) error {
-	name, _, err := startJob(startName, startDir, args)
+	name, _, err := startJob(startName, startDir, startAutoRm, args)
 	if err != nil {
 		return err
 	}
@@ -35,7 +37,7 @@ func runStart(cmd *cobra.Command, args []string) error {
 
 // startJob is the shared logic for launching a supervised job.
 // Returns the resolved job name and metadata.
-func startJob(name, dir string, args []string) (string, *job.Meta, error) {
+func startJob(name, dir string, autoRemove bool, args []string) (string, *job.Meta, error) {
 	if err := job.EnsureJobsDir(); err != nil {
 		return "", nil, fmt.Errorf("creating state directory: %w", err)
 	}
@@ -61,10 +63,11 @@ func startJob(name, dir string, args []string) (string, *job.Meta, error) {
 	}
 
 	meta := &job.Meta{
-		Name:    name,
-		Command: args,
-		Dir:     dir,
-		Status:  "running",
+		Name:       name,
+		Command:    args,
+		Dir:        dir,
+		Status:     "running",
+		AutoRemove: autoRemove,
 	}
 	if err := job.WriteMeta(job.MetaPath(name), meta); err != nil {
 		return "", nil, fmt.Errorf("writing metadata: %w", err)

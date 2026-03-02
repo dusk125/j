@@ -19,14 +19,16 @@ var runCmd = &cobra.Command{
 
 var runName string
 var runDir string
+var runAutoRm bool
 
 func init() {
 	runCmd.Flags().StringVar(&runName, "name", "", "Job name (auto-generated if empty)")
 	runCmd.Flags().StringVar(&runDir, "dir", "", "Working directory (default: current directory)")
+	runCmd.Flags().BoolVar(&runAutoRm, "rm", false, "Remove job after it exits")
 }
 
 func runRun(cmd *cobra.Command, args []string) error {
-	name, _, err := startJob(runName, runDir, args)
+	name, _, err := startJob(runName, runDir, false, args)
 	if err != nil {
 		return err
 	}
@@ -37,10 +39,18 @@ func runRun(cmd *cobra.Command, args []string) error {
 	fd := int(os.Stdin.Fd())
 	isTTY := term.IsTerminal(fd)
 
+	var result error
 	if isTTY {
-		return foregroundAttach(name)
+		result = foregroundAttach(name)
+	} else {
+		result = foregroundFollow(name)
 	}
-	return foregroundFollow(name)
+
+	if runAutoRm {
+		job.RemoveJob(name)
+	}
+
+	return result
 }
 
 // foregroundAttach runs like attach but exits when the job does.

@@ -16,6 +16,7 @@ type Meta struct {
 	EndedAt       time.Time `json:"ended_at,omitempty"`
 	ExitCode      *int      `json:"exit_code,omitempty"`
 	Status        string    `json:"status"`
+	AutoRemove    bool      `json:"auto_remove,omitempty"`
 }
 
 func ReadMeta(path string) (*Meta, error) {

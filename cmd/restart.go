@@ -57,15 +57,16 @@ func runRestart(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Save the command and directory before removing
+	// Save config before removing
 	command := meta.Command
 	dir := meta.Dir
+	autoRemove := meta.AutoRemove
 
 	if err := job.RemoveJob(name); err != nil {
 		return fmt.Errorf("removing old job: %w", err)
 	}
 
-	newName, _, err := startJob(name, dir, command)
+	newName, _, err := startJob(name, dir, autoRemove, command)
 	if err != nil {
 		return err
 	}

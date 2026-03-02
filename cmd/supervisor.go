@@ -113,5 +113,10 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 	}
 
 	job.WriteMeta(job.MetaPath(name), meta)
+
+	if meta.AutoRemove {
+		job.RemoveJob(name)
+	}
+
 	return nil
 }
