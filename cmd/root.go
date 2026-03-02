@@ -51,4 +51,5 @@ func init() {
 	rootCmd.AddCommand(restartCmd)
 	rootCmd.AddCommand(inspectCmd)
 	rootCmd.AddCommand(waitCmd)
+	rootCmd.AddCommand(eventsCmd)
 }

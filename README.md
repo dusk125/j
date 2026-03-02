@@ -34,6 +34,7 @@ go build -o j .
 | `j wait` | Block until a job exits, propagate its exit code |
 | `j rm` | Remove a stopped job (`--force` for running) |
 | `j clean` | Remove all non-running jobs |
+| `j events` | Show jobs that recently changed state |
 
 ## Usage
 
@@ -123,6 +124,23 @@ Clean up all finished jobs:
 
 ```
 j clean
+```
+
+Show jobs that recently changed state (default: last hour):
+
+```
+j events
+```
+```
+NAME         EVENT   EXIT  AGO      COMMAND
+build        exited  0     5m ago   make build
+server       exited  1     22m ago  python3 -m http.server 8080
+```
+
+Show events from a wider time window:
+
+```
+j events --since 24h
 ```
 
 ## State
