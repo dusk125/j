@@ -36,6 +36,10 @@ func StderrLogPath(name string) string {
 	return filepath.Join(JobDir(name), "stderr.log")
 }
 
+func StdinPipePath(name string) string {
+	return filepath.Join(JobDir(name), "stdin.pipe")
+}
+
 func SupervisorPIDPath(name string) string {
 	return filepath.Join(JobDir(name), "supervisor.pid")
 }

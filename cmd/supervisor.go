@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"syscall"
 	"time"
 
 	"github.com/dusk125/j/job"
@@ -39,9 +40,22 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 	}
 	defer stderrLog.Close()
 
+	// Create a FIFO for stdin so attach clients can send input
+	fifoPath := job.StdinPipePath(name)
+	os.Remove(fifoPath) // clean up any stale FIFO
+	if err := syscall.Mkfifo(fifoPath, 0600); err != nil {
+		return fmt.Errorf("creating stdin fifo: %w", err)
+	}
+	// Open O_RDWR so reads block (instead of EOF) when no writer is connected
+	stdinFifo, err := os.OpenFile(fifoPath, os.O_RDWR, 0)
+	if err != nil {
+		return fmt.Errorf("opening stdin fifo: %w", err)
+	}
+	defer stdinFifo.Close()
+
 	child := exec.Command(meta.Command[0], meta.Command[1:]...)
 	child.Dir = meta.Dir
-	child.Stdin = nil
+	child.Stdin = stdinFifo
 
 	stdoutPipe, err := child.StdoutPipe()
 	if err != nil {
