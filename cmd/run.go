@@ -50,9 +50,11 @@ func foregroundAttach(name string) error {
 		return fmt.Errorf("job %q not found", name)
 	}
 
-	fifo, err := os.OpenFile(job.StdinPipePath(name), os.O_WRONLY, 0)
+	// Open FIFO with O_RDWR so it never blocks (even if supervisor already exited)
+	fifo, err := os.OpenFile(job.StdinPipePath(name), os.O_RDWR, 0)
 	if err != nil {
-		return fmt.Errorf("opening stdin pipe: %w", err)
+		// FIFO gone — job exited before we got here, fall back to drain
+		return foregroundFollow(name)
 	}
 	defer fifo.Close()
 

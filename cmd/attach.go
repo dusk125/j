@@ -40,8 +40,8 @@ func runAttach(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("stdin is not a terminal")
 	}
 
-	// Open the stdin FIFO for writing
-	fifo, err := os.OpenFile(job.StdinPipePath(name), os.O_WRONLY, 0)
+	// Open FIFO with O_RDWR so it never blocks (even if job exits during open)
+	fifo, err := os.OpenFile(job.StdinPipePath(name), os.O_RDWR, 0)
 	if err != nil {
 		return fmt.Errorf("opening stdin pipe: %w (is the job running?)", err)
 	}
