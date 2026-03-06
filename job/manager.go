@@ -102,7 +102,29 @@ func RefreshStatus(m *Meta) {
 }
 
 func RemoveJob(name string) error {
-	return os.RemoveAll(JobDir(name))
+	if err := os.RemoveAll(JobDir(name)); err != nil {
+		return err
+	}
+	CleanDanglingSymlinks()
+	return nil
+}
+
+// CleanDanglingSymlinks removes any symlinks in the jobs directory that
+// no longer point to a valid target (left over from job renames).
+func CleanDanglingSymlinks() {
+	entries, err := os.ReadDir(JobsDir())
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		if e.Type()&os.ModeSymlink == 0 {
+			continue
+		}
+		p := filepath.Join(JobsDir(), e.Name())
+		if _, err := os.Stat(p); os.IsNotExist(err) {
+			os.Remove(p)
+		}
+	}
 }
 
 func WriteSupervisorPID(name string, pid int) error {

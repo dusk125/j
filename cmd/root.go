@@ -52,4 +52,5 @@ func init() {
 	rootCmd.AddCommand(inspectCmd)
 	rootCmd.AddCommand(waitCmd)
 	rootCmd.AddCommand(eventsCmd)
+	rootCmd.AddCommand(renameCmd)
 }
