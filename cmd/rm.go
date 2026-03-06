@@ -30,6 +30,14 @@ func runRm(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("job %q not found", name)
 	}
 
+	if meta.IsService() {
+		if err := job.RemoveJob(name); err != nil {
+			return fmt.Errorf("removing job: %w", err)
+		}
+		fmt.Printf("Removed managed service %q (service %s is unaffected)\n", name, meta.ServiceUnit)
+		return nil
+	}
+
 	if meta.Status == "running" && !rmForce {
 		return fmt.Errorf("job %q is still running (use --force to remove)", name)
 	}

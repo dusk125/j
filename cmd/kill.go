@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"strings"
 	"syscall"
 
 	"github.com/dusk125/j/job"
@@ -25,8 +27,18 @@ func runKill(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("job %q not found", name)
 	}
 
+	job.RefreshStatus(meta)
 	if meta.Status != "running" {
 		return fmt.Errorf("job %q is not running (status: %s)", name, meta.Status)
+	}
+
+	if meta.IsService() {
+		out, err := exec.Command("systemctl", "--user", "kill", "--signal=SIGKILL", meta.ServiceUnit).CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("systemctl kill %s: %s", meta.ServiceUnit, strings.TrimSpace(string(out)))
+		}
+		fmt.Printf("Sent SIGKILL to service %q (%s)\n", name, meta.ServiceUnit)
+		return nil
 	}
 
 	proc, err := os.FindProcess(meta.PID)

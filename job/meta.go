@@ -17,6 +17,11 @@ type Meta struct {
 	ExitCode      *int      `json:"exit_code,omitempty"`
 	Status        string    `json:"status"`
 	AutoRemove    bool      `json:"auto_remove,omitempty"`
+	ServiceUnit   string    `json:"service_unit,omitempty"`
+}
+
+func (m *Meta) IsService() bool {
+	return m.ServiceUnit != ""
 }
 
 func ReadMeta(path string) (*Meta, error) {

@@ -31,6 +31,10 @@ func runAttach(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("job %q not found", name)
 	}
 
+	if meta.IsService() {
+		return fmt.Errorf("job %q is a managed systemctl service; use 'j logs %s' instead", name, name)
+	}
+
 	job.RefreshStatus(meta)
 	if meta.Status != "running" {
 		return fmt.Errorf("job %q is not running (status: %s)", name, meta.Status)

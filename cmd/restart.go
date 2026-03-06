@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"strings"
 	"syscall"
 	"time"
 
@@ -24,6 +26,15 @@ func runRestart(cmd *cobra.Command, args []string) error {
 	meta, err := job.ReadMeta(job.MetaPath(name))
 	if err != nil {
 		return fmt.Errorf("job %q not found", name)
+	}
+
+	if meta.IsService() {
+		out, err := exec.Command("systemctl", "--user", "restart", meta.ServiceUnit).CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("systemctl restart %s: %s", meta.ServiceUnit, strings.TrimSpace(string(out)))
+		}
+		fmt.Printf("Restarted service %q (%s)\n", name, meta.ServiceUnit)
+		return nil
 	}
 
 	// If still running, stop it first

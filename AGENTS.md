@@ -32,6 +32,7 @@ cmd/
   inspect.go             `j inspect`, dump meta.json
   wait.go                `j wait`, block until exit
   events.go              `j events`, recently changed jobs
+  service.go             `j manage`/`j unmanage`, opt-in systemctl service management
 job/
   meta.go                Meta struct, ReadMeta/WriteMeta (JSON)
   manager.go             State directory CRUD, path helpers, RefreshStatus, ListJobs

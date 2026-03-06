@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 
 	"github.com/dusk125/j/job"
@@ -38,6 +39,15 @@ func runLogs(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("job %q not found", name)
 	}
 
+	meta, err := job.ReadMeta(job.MetaPath(name))
+	if err != nil {
+		return fmt.Errorf("job %q not found", name)
+	}
+
+	if meta.IsService() {
+		return serviceJournalLogs(meta)
+	}
+
 	showStdout := !logsStderr
 	showStderr := !logsStdout
 
@@ -65,6 +75,27 @@ func runLogs(cmd *cobra.Command, args []string) error {
 	}
 
 	return printExisting(name, showStdout, showStderr, showPrefix)
+}
+
+func serviceJournalLogs(meta *job.Meta) error {
+	jArgs := []string{"--user", "-u", meta.ServiceUnit, "--no-pager"}
+	if logsTail > 0 {
+		jArgs = append(jArgs, "-n", fmt.Sprintf("%d", logsTail))
+	}
+	if logsFollow {
+		jArgs = append(jArgs, "-f")
+	}
+	c := exec.Command("journalctl", jArgs...)
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	err := c.Run()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return exitCodeError{code: exitErr.ExitCode()}
+		}
+		return err
+	}
+	return nil
 }
 
 func printExisting(name string, showStdout, showStderr, showPrefix bool) error {

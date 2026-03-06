@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/dusk125/j/job"
 	"github.com/spf13/cobra"
@@ -27,6 +28,23 @@ func init() {
 }
 
 func runStart(cmd *cobra.Command, args []string) error {
+	// If a single arg matches an existing managed service, start it via systemctl
+	if len(args) == 1 && job.JobExists(args[0]) {
+		meta, err := job.ReadMeta(job.MetaPath(args[0]))
+		if err == nil && meta.IsService() {
+			job.RefreshStatus(meta)
+			if meta.Status == "running" {
+				return fmt.Errorf("service %q is already running", args[0])
+			}
+			out, err := exec.Command("systemctl", "--user", "start", meta.ServiceUnit).CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("systemctl start %s: %s", meta.ServiceUnit, strings.TrimSpace(string(out)))
+			}
+			fmt.Printf("Started service %q (%s)\n", args[0], meta.ServiceUnit)
+			return nil
+		}
+	}
+
 	name, _, err := startJob(startName, startDir, startAutoRm, args)
 	if err != nil {
 		return err

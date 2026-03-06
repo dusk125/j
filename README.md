@@ -35,6 +35,8 @@ go build -o j .
 | `j rm` | Remove a stopped job (`--force` for running) |
 | `j clean` | Remove all non-running jobs |
 | `j events` | Show jobs that recently changed state |
+| `j manage` | Manage a user systemctl service as a j job |
+| `j unmanage` | Stop managing a systemctl service |
 
 ## Usage
 
@@ -141,6 +143,19 @@ Show events from a wider time window:
 
 ```
 j events --since 24h
+```
+
+Manage a user systemctl service as a regular j job:
+
+```
+j manage mydeck                # start managing mydeck.service
+j ps                           # mydeck appears alongside other jobs
+j stop mydeck                  # systemctl --user stop mydeck.service
+j start mydeck                 # systemctl --user start mydeck.service
+j restart mydeck               # systemctl --user restart mydeck.service
+j logs mydeck                  # journalctl --user -u mydeck.service
+j logs mydeck -f               # follow journal logs
+j unmanage mydeck              # stop managing (service is unaffected)
 ```
 
 ## State

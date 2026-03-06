@@ -3,8 +3,10 @@ package job
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -82,6 +84,10 @@ func ListJobs() ([]*Meta, error) {
 
 // RefreshStatus checks if a running job's process is still alive and updates status.
 func RefreshStatus(m *Meta) {
+	if m.IsService() {
+		refreshServiceStatus(m)
+		return
+	}
 	if m.Status != "running" {
 		return
 	}
@@ -99,6 +105,42 @@ func RefreshStatus(m *Meta) {
 		m.Status = "failed"
 		WriteMeta(MetaPath(m.Name), m)
 	}
+}
+
+// refreshServiceStatus queries systemctl for the current state of a managed service.
+func refreshServiceStatus(m *Meta) {
+	out, err := exec.Command("systemctl", "--user", "show", m.ServiceUnit,
+		"--property=ActiveState,MainPID").Output()
+	if err != nil {
+		m.Status = "failed"
+		return
+	}
+	props := parseSystemctlProperties(string(out))
+
+	switch props["ActiveState"] {
+	case "active", "reloading", "activating":
+		m.Status = "running"
+	case "inactive", "deactivating":
+		m.Status = "exited"
+	default:
+		m.Status = "failed"
+	}
+
+	if pid, err := strconv.Atoi(props["MainPID"]); err == nil && pid > 0 {
+		m.PID = pid
+	} else {
+		m.PID = 0
+	}
+}
+
+func parseSystemctlProperties(output string) map[string]string {
+	props := make(map[string]string)
+	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
+		if k, v, ok := strings.Cut(line, "="); ok {
+			props[k] = v
+		}
+	}
+	return props
 }
 
 func RemoveJob(name string) error {

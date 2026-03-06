@@ -21,7 +21,7 @@ func runClean(cmd *cobra.Command, args []string) error {
 
 	var removed int
 	for _, m := range jobs {
-		if m.Status == "running" {
+		if m.Status == "running" || m.IsService() {
 			continue
 		}
 		if err := job.RemoveJob(m.Name); err != nil {
