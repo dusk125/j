@@ -18,8 +18,9 @@ import (
 var attachCmd = &cobra.Command{
 	Use:   "attach NAME",
 	Short: "Attach to a running job's stdin/stdout/stderr",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runAttach,
+	Args:              cobra.ExactArgs(1),
+	RunE:              runAttach,
+	ValidArgsFunction: completeJobNames(true),
 }
 
 func runAttach(cmd *cobra.Command, args []string) error {

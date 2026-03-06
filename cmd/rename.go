@@ -12,8 +12,9 @@ import (
 var renameCmd = &cobra.Command{
 	Use:   "rename OLD NEW",
 	Short: "Rename a job",
-	Args:  cobra.ExactArgs(2),
-	RunE:  runRename,
+	Args:              cobra.ExactArgs(2),
+	RunE:              runRename,
+	ValidArgsFunction: completeJobNames(false),
 }
 
 func runRename(cmd *cobra.Command, args []string) error {

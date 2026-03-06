@@ -12,8 +12,9 @@ import (
 var waitCmd = &cobra.Command{
 	Use:   "wait NAME",
 	Short: "Wait for a job to exit and return its exit code",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runWait,
+	Args:              cobra.ExactArgs(1),
+	RunE:              runWait,
+	ValidArgsFunction: completeJobNames(true),
 }
 
 var waitAutoRm bool

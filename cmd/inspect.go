@@ -12,8 +12,9 @@ import (
 var inspectCmd = &cobra.Command{
 	Use:   "inspect NAME",
 	Short: "Show detailed job metadata",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runInspect,
+	Args:              cobra.ExactArgs(1),
+	RunE:              runInspect,
+	ValidArgsFunction: completeJobNames(false),
 }
 
 func runInspect(cmd *cobra.Command, args []string) error {

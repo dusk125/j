@@ -11,8 +11,9 @@ import (
 var rmCmd = &cobra.Command{
 	Use:   "rm NAME",
 	Short: "Remove a job",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runRm,
+	Args:              cobra.ExactArgs(1),
+	RunE:              runRm,
+	ValidArgsFunction: completeJobNames(false),
 }
 
 var rmForce bool

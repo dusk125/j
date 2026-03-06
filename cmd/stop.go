@@ -12,8 +12,9 @@ import (
 var stopCmd = &cobra.Command{
 	Use:   "stop NAME",
 	Short: "Send SIGINT to a job",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runStop,
+	Args:              cobra.ExactArgs(1),
+	RunE:              runStop,
+	ValidArgsFunction: completeJobNames(true),
 }
 
 func runStop(cmd *cobra.Command, args []string) error {

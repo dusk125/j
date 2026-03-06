@@ -12,8 +12,9 @@ import (
 var logsCmd = &cobra.Command{
 	Use:   "logs NAME",
 	Short: "View job logs",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runLogs,
+	Args:              cobra.ExactArgs(1),
+	RunE:              runLogs,
+	ValidArgsFunction: completeJobNames(false),
 }
 
 var (

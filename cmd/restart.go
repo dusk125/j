@@ -13,8 +13,9 @@ import (
 var restartCmd = &cobra.Command{
 	Use:   "restart NAME",
 	Short: "Restart a job with the same command",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runRestart,
+	Args:              cobra.ExactArgs(1),
+	RunE:              runRestart,
+	ValidArgsFunction: completeJobNames(false),
 }
 
 func runRestart(cmd *cobra.Command, args []string) error {
