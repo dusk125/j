@@ -135,7 +135,7 @@ func refreshServiceStatus(m *Meta) {
 
 func parseSystemctlProperties(output string) map[string]string {
 	props := make(map[string]string)
-	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(output), "\n") {
 		if k, v, ok := strings.Cut(line, "="); ok {
 			props[k] = v
 		}
@@ -170,7 +170,7 @@ func CleanDanglingSymlinks() {
 }
 
 func WriteSupervisorPID(name string, pid int) error {
-	return os.WriteFile(SupervisorPIDPath(name), []byte(fmt.Sprintf("%d", pid)), 0644)
+	return os.WriteFile(SupervisorPIDPath(name), fmt.Appendf(nil, "%d", pid), 0644)
 }
 
 func ReadSupervisorPID(name string) (int, error) {
