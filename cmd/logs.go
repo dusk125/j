@@ -11,8 +11,8 @@ import (
 )
 
 var logsCmd = &cobra.Command{
-	Use:   "logs NAME",
-	Short: "View job logs",
+	Use:               "logs NAME",
+	Short:             "View job logs",
 	Args:              cobra.ExactArgs(1),
 	RunE:              runLogs,
 	ValidArgsFunction: completeJobNames(false),
@@ -60,9 +60,6 @@ func runLogs(cmd *cobra.Command, args []string) error {
 	showPrefix := showStdout && showStderr
 
 	if logsFollow {
-		// Print existing logs first
-		printExisting(name, showStdout, showStderr, showPrefix)
-
 		stop := make(chan struct{})
 		sig := make(chan os.Signal, 1)
 		signal.Notify(sig, os.Interrupt)
