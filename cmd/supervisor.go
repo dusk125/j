@@ -55,6 +55,9 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 
 	child := exec.Command(meta.Command[0], meta.Command[1:]...)
 	child.Dir = meta.Dir
+	if len(meta.Env) > 0 {
+		child.Env = append(os.Environ(), meta.Env...)
+	}
 	child.Stdin = stdinFifo
 
 	stdoutPipe, err := child.StdoutPipe()

@@ -26,6 +26,7 @@ type Meta struct {
 	EndedAt       time.Time `json:"ended_at,omitempty"`
 	ExitCode      *int      `json:"exit_code,omitempty"`
 	Status        Status    `json:"status"`
+	Env           []string  `json:"env,omitempty"`
 	AutoRemove    bool      `json:"auto_remove,omitempty"`
 	ServiceUnit   string    `json:"service_unit,omitempty"`
 }

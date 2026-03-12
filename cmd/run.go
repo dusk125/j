@@ -20,15 +20,17 @@ var runCmd = &cobra.Command{
 var runName string
 var runDir string
 var runAutoRm bool
+var runEnv []string
 
 func init() {
 	runCmd.Flags().StringVar(&runName, "name", "", "Job name (auto-generated if empty)")
 	runCmd.Flags().StringVar(&runDir, "dir", "", "Working directory (default: current directory)")
 	runCmd.Flags().BoolVar(&runAutoRm, "rm", false, "Remove job after it exits")
+	runCmd.Flags().StringArrayVarP(&runEnv, "env", "e", nil, "Set environment variables (KEY=VALUE)")
 }
 
 func runRun(cmd *cobra.Command, args []string) error {
-	name, _, err := startJob(runName, runDir, false, args)
+	name, _, err := startJob(runName, runDir, false, runEnv, args)
 	if err != nil {
 		return err
 	}
