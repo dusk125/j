@@ -50,5 +50,7 @@ func runKill(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("Sent SIGKILL to job %q (pid %d)\n", name, meta.PID)
+	waitForProcessExit(name, 0)
+	fmt.Printf("Job %q killed\n", name)
 	return nil
 }
