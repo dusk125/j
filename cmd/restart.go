@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/dusk125/j/job"
@@ -46,11 +45,11 @@ func runRestart(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("finding process: %w", err)
 		}
-		proc.Signal(syscall.SIGINT)
+		proc.Signal(os.Interrupt)
 		fmt.Printf("Stopping job %q...\n", name)
 
 		// Wait up to 5 seconds for graceful exit
-		for i := 0; i < 50; i++ {
+		for range 50 {
 			time.Sleep(100 * time.Millisecond)
 			meta, _ = job.ReadMeta(job.MetaPath(name))
 			if meta.Status != job.Running {
@@ -64,7 +63,7 @@ func runRestart(cmd *cobra.Command, args []string) error {
 
 		// Force kill if still running
 		if meta.Status == job.Running {
-			proc.Signal(syscall.SIGKILL)
+			proc.Signal(os.Kill)
 			time.Sleep(200 * time.Millisecond)
 		}
 	}

@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 
 	"github.com/dusk125/j/job"
 	"github.com/spf13/cobra"
@@ -46,7 +45,7 @@ func runStop(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("finding process: %w", err)
 	}
 
-	if err := proc.Signal(syscall.SIGINT); err != nil {
+	if err := proc.Signal(os.Interrupt); err != nil {
 		return fmt.Errorf("sending SIGINT: %w", err)
 	}
 

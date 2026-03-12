@@ -124,7 +124,7 @@ func foregroundAttach(name string) error {
 
 			written := 0
 			detach := false
-			for i := 0; i < n; i++ {
+			for i := range n {
 				switch buf[i] {
 				case 0x11: // Ctrl+Q — detach
 					if i > written {

@@ -7,7 +7,6 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/dusk125/j/job"
@@ -105,7 +104,7 @@ func runAttach(cmd *cobra.Command, args []string) error {
 
 			written := 0
 			detach := false
-			for i := 0; i < n; i++ {
+			for i := range n {
 				switch buf[i] {
 				case 0x11: // Ctrl+Q — detach
 					if i > written {
@@ -158,9 +157,9 @@ func signalJob(pid int, kill bool) {
 		return
 	}
 	if kill {
-		proc.Signal(syscall.SIGKILL)
+		proc.Signal(os.Kill)
 	} else {
-		proc.Signal(syscall.SIGINT)
+		proc.Signal(os.Interrupt)
 	}
 }
 
