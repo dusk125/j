@@ -59,15 +59,9 @@ func runLogs(cmd *cobra.Command, args []string) error {
 
 	showPrefix := showStdout && showStderr
 
-	if logsFollow {
-		stop := make(chan struct{})
-		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, os.Interrupt)
-		go func() {
-			<-sig
-			close(stop)
-		}()
-		job.FollowLogs(os.Stdout, name, showStdout, showStderr, showPrefix, stop)
+	if logsFollow && meta.Status == job.Running {
+		ctx, _ := signal.NotifyContext(cmd.Context(), os.Interrupt)
+		job.FollowLogs(ctx, os.Stdout, name, showStdout, showStderr, showPrefix)
 		return nil
 	}
 

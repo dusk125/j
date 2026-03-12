@@ -9,8 +9,8 @@ import (
 )
 
 var rmCmd = &cobra.Command{
-	Use:   "rm NAME",
-	Short: "Remove a job",
+	Use:               "rm NAME",
+	Short:             "Remove a job",
 	Args:              cobra.ExactArgs(1),
 	RunE:              runRm,
 	ValidArgsFunction: completeJobNames(false),
@@ -38,13 +38,13 @@ func runRm(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	if meta.Status == "running" && !rmForce {
+	if meta.Status == job.Running && !rmForce {
 		return fmt.Errorf("job %q is still running (use --force to remove)", name)
 	}
 
-	if meta.Status == "running" && rmForce {
+	if meta.Status == job.Running && rmForce {
 		job.RefreshStatus(meta)
-		if meta.Status == "running" {
+		if meta.Status == job.Running {
 			if proc, err := os.FindProcess(meta.PID); err == nil {
 				proc.Kill()
 			}
@@ -58,4 +58,3 @@ func runRm(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Removed job %q\n", name)
 	return nil
 }
-

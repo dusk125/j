@@ -13,8 +13,8 @@ import (
 )
 
 var restartCmd = &cobra.Command{
-	Use:   "restart NAME",
-	Short: "Restart a job with the same command",
+	Use:               "restart NAME",
+	Short:             "Restart a job with the same command",
 	Args:              cobra.ExactArgs(1),
 	RunE:              runRestart,
 	ValidArgsFunction: completeJobNames(false),
@@ -38,10 +38,10 @@ func runRestart(cmd *cobra.Command, args []string) error {
 	}
 
 	// If still running, stop it first
-	if meta.Status == "running" {
+	if meta.Status == job.Running {
 		job.RefreshStatus(meta)
 	}
-	if meta.Status == "running" {
+	if meta.Status == job.Running {
 		proc, err := os.FindProcess(meta.PID)
 		if err != nil {
 			return fmt.Errorf("finding process: %w", err)
@@ -53,17 +53,17 @@ func runRestart(cmd *cobra.Command, args []string) error {
 		for i := 0; i < 50; i++ {
 			time.Sleep(100 * time.Millisecond)
 			meta, _ = job.ReadMeta(job.MetaPath(name))
-			if meta.Status != "running" {
+			if meta.Status != job.Running {
 				break
 			}
 			job.RefreshStatus(meta)
-			if meta.Status != "running" {
+			if meta.Status != job.Running {
 				break
 			}
 		}
 
 		// Force kill if still running
-		if meta.Status == "running" {
+		if meta.Status == job.Running {
 			proc.Signal(syscall.SIGKILL)
 			time.Sleep(200 * time.Millisecond)
 		}

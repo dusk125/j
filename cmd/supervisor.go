@@ -70,7 +70,7 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 	meta.StartedAt = now
 
 	if err := child.Start(); err != nil {
-		meta.Status = "failed"
+		meta.Status = job.Failed
 		meta.EndedAt = time.Now()
 		job.WriteMeta(job.MetaPath(name), meta)
 		return fmt.Errorf("starting command: %w", err)
@@ -102,14 +102,14 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			code := exitErr.ExitCode()
 			meta.ExitCode = &code
-			meta.Status = "exited"
+			meta.Status = job.Exited
 		} else {
-			meta.Status = "failed"
+			meta.Status = job.Failed
 		}
 	} else {
 		code := 0
 		meta.ExitCode = &code
-		meta.Status = "exited"
+		meta.Status = job.Exited
 	}
 
 	job.WriteMeta(job.MetaPath(name), meta)

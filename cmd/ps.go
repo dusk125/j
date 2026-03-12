@@ -33,7 +33,7 @@ func runPs(cmd *cobra.Command, args []string) error {
 	fmt.Fprintln(w, "NAME\tSTATUS\tPID\tRUNTIME\tCOMMAND")
 
 	for _, m := range jobs {
-		if !psAll && m.Status != "running" {
+		if !psAll && m.Status != job.Running {
 			continue
 		}
 		runtime := formatRuntime(m)

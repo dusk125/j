@@ -88,7 +88,7 @@ func RefreshStatus(m *Meta) {
 		refreshServiceStatus(m)
 		return
 	}
-	if m.Status != "running" {
+	if m.Status != Running {
 		return
 	}
 	if m.PID <= 0 {
@@ -96,13 +96,13 @@ func RefreshStatus(m *Meta) {
 	}
 	proc, err := os.FindProcess(m.PID)
 	if err != nil {
-		m.Status = "failed"
+		m.Status = Failed
 		return
 	}
 	err = proc.Signal(syscall.Signal(0))
 	if err != nil {
 		// Process is dead but meta wasn't updated (supervisor crashed?)
-		m.Status = "failed"
+		m.Status = Failed
 		WriteMeta(MetaPath(m.Name), m)
 	}
 }
@@ -112,18 +112,18 @@ func refreshServiceStatus(m *Meta) {
 	out, err := exec.Command("systemctl", "--user", "show", m.ServiceUnit,
 		"--property=ActiveState,MainPID").Output()
 	if err != nil {
-		m.Status = "failed"
+		m.Status = Failed
 		return
 	}
 	props := parseSystemctlProperties(string(out))
 
 	switch props["ActiveState"] {
 	case "active", "reloading", "activating":
-		m.Status = "running"
+		m.Status = Running
 	case "inactive", "deactivating":
-		m.Status = "exited"
+		m.Status = Exited
 	default:
-		m.Status = "failed"
+		m.Status = Failed
 	}
 
 	if pid, err := strconv.Atoi(props["MainPID"]); err == nil && pid > 0 {

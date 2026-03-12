@@ -16,8 +16,8 @@ import (
 )
 
 var attachCmd = &cobra.Command{
-	Use:   "attach NAME",
-	Short: "Attach to a running job's stdin/stdout/stderr",
+	Use:               "attach NAME",
+	Short:             "Attach to a running job's stdin/stdout/stderr",
 	Args:              cobra.ExactArgs(1),
 	RunE:              runAttach,
 	ValidArgsFunction: completeJobNames(true),
@@ -36,7 +36,7 @@ func runAttach(cmd *cobra.Command, args []string) error {
 	}
 
 	job.RefreshStatus(meta)
-	if meta.Status != "running" {
+	if meta.Status != job.Running {
 		return fmt.Errorf("job %q is not running (status: %s)", name, meta.Status)
 	}
 
@@ -196,7 +196,7 @@ func attachFollowUntilExit(w io.Writer, name string, stop <-chan struct{}, jobEx
 
 		// Check if job has exited
 		meta, err := job.ReadMeta(job.MetaPath(name))
-		if err == nil && meta.Status != "running" {
+		if err == nil && meta.Status != job.Running {
 			// Drain any remaining log entries
 			time.Sleep(50 * time.Millisecond)
 			outs, _ := readNewLogEntries(job.StdoutLogPath(name), stdoutOffset)

@@ -12,8 +12,8 @@ import (
 )
 
 var stopCmd = &cobra.Command{
-	Use:   "stop NAME",
-	Short: "Send SIGINT to a job",
+	Use:               "stop NAME",
+	Short:             "Send SIGINT to a job",
 	Args:              cobra.ExactArgs(1),
 	RunE:              runStop,
 	ValidArgsFunction: completeJobNames(true),
@@ -28,7 +28,7 @@ func runStop(cmd *cobra.Command, args []string) error {
 	}
 
 	job.RefreshStatus(meta)
-	if meta.Status != "running" {
+	if meta.Status != job.Running {
 		return fmt.Errorf("job %q is not running (status: %s)", name, meta.Status)
 	}
 

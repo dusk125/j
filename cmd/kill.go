@@ -12,8 +12,8 @@ import (
 )
 
 var killCmd = &cobra.Command{
-	Use:   "kill NAME",
-	Short: "Send SIGKILL to a job",
+	Use:               "kill NAME",
+	Short:             "Send SIGKILL to a job",
 	Args:              cobra.ExactArgs(1),
 	RunE:              runKill,
 	ValidArgsFunction: completeJobNames(true),
@@ -28,7 +28,7 @@ func runKill(cmd *cobra.Command, args []string) error {
 	}
 
 	job.RefreshStatus(meta)
-	if meta.Status != "running" {
+	if meta.Status != job.Running {
 		return fmt.Errorf("job %q is not running (status: %s)", name, meta.Status)
 	}
 

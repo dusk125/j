@@ -10,8 +10,8 @@ import (
 )
 
 var renameCmd = &cobra.Command{
-	Use:   "rename OLD NEW",
-	Short: "Rename a job",
+	Use:               "rename OLD NEW",
+	Short:             "Rename a job",
 	Args:              cobra.ExactArgs(2),
 	RunE:              runRename,
 	ValidArgsFunction: completeJobNames(false),
@@ -52,7 +52,7 @@ func runRename(cmd *cobra.Command, args []string) error {
 
 	// If the job is running, the supervisor still references the old name for
 	// path construction. Create a symlink so those paths continue to resolve.
-	if meta.Status == "running" {
+	if meta.Status == job.Running {
 		rel, err := filepath.Rel(filepath.Dir(oldDir), newDir)
 		if err != nil {
 			rel = newDir

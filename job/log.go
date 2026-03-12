@@ -2,6 +2,7 @@ package job
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -142,12 +143,12 @@ func PrintEntries(w io.Writer, entries []LogEntry, showPrefix bool) {
 }
 
 // FollowLogs polls log files and streams new lines to the writer.
-func FollowLogs(w io.Writer, name string, showStdout, showStderr bool, showPrefix bool, stop <-chan struct{}) {
+func FollowLogs(ctx context.Context, w io.Writer, name string, showStdout, showStderr bool, showPrefix bool) {
 	var stdoutOffset, stderrOffset int64
 
 	for {
 		select {
-		case <-stop:
+		case <-ctx.Done():
 			return
 		default:
 		}

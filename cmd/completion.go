@@ -13,7 +13,7 @@ func completeJobNames(onlyRunning bool) func(*cobra.Command, []string, string) (
 		}
 		var names []string
 		for _, m := range jobs {
-			if onlyRunning && m.Status != "running" {
+			if onlyRunning && m.Status != job.Running {
 				continue
 			}
 			names = append(names, m.Name)

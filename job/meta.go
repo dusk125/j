@@ -6,6 +6,16 @@ import (
 	"time"
 )
 
+type Status string
+
+const (
+	Started Status = "started"
+	Running Status = "running"
+	Exited  Status = "exited"
+	Failed  Status = "failed"
+	Killed  Status = "killed"
+)
+
 type Meta struct {
 	Name          string    `json:"name"`
 	Command       []string  `json:"command"`
@@ -15,7 +25,7 @@ type Meta struct {
 	StartedAt     time.Time `json:"started_at"`
 	EndedAt       time.Time `json:"ended_at,omitempty"`
 	ExitCode      *int      `json:"exit_code,omitempty"`
-	Status        string    `json:"status"`
+	Status        Status    `json:"status"`
 	AutoRemove    bool      `json:"auto_remove,omitempty"`
 	ServiceUnit   string    `json:"service_unit,omitempty"`
 }

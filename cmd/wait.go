@@ -10,8 +10,8 @@ import (
 )
 
 var waitCmd = &cobra.Command{
-	Use:   "wait NAME",
-	Short: "Wait for a job to exit and return its exit code",
+	Use:               "wait NAME",
+	Short:             "Wait for a job to exit and return its exit code",
 	Args:              cobra.ExactArgs(1),
 	RunE:              runWait,
 	ValidArgsFunction: completeJobNames(true),
@@ -32,7 +32,7 @@ func runWait(cmd *cobra.Command, args []string) error {
 	}
 
 	// Already exited
-	if meta.Status != "running" {
+	if meta.Status != job.Running {
 		if waitAutoRm {
 			job.RemoveJob(name)
 		}
@@ -47,7 +47,7 @@ func runWait(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("reading job state: %w", err)
 		}
 		job.RefreshStatus(meta)
-		if meta.Status != "running" {
+		if meta.Status != job.Running {
 			if waitAutoRm {
 				job.RemoveJob(name)
 			}

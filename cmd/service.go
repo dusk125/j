@@ -66,7 +66,7 @@ func runManage(cmd *cobra.Command, args []string) error {
 		Name:        name,
 		Command:     []string{unit},
 		ServiceUnit: unit,
-		Status:      "running",
+		Status:      job.Running,
 	}
 	job.RefreshStatus(meta)
 

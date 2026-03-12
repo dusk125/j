@@ -42,7 +42,7 @@ func runEvents(cmd *cobra.Command, args []string) error {
 	type event struct {
 		meta *job.Meta
 		when time.Time
-		kind string // "started", "exited", "failed", "killed"
+		kind job.Status
 	}
 
 	var events []event
@@ -52,8 +52,8 @@ func runEvents(cmd *cobra.Command, args []string) error {
 			events = append(events, event{meta: m, when: m.EndedAt, kind: m.Status})
 		}
 		// Job started after cutoff and is still running
-		if m.Status == "running" && !m.StartedAt.IsZero() && m.StartedAt.After(cutoff) {
-			events = append(events, event{meta: m, when: m.StartedAt, kind: "started"})
+		if m.Status == job.Running && !m.StartedAt.IsZero() && m.StartedAt.After(cutoff) {
+			events = append(events, event{meta: m, when: m.StartedAt, kind: job.Started})
 		}
 	}
 

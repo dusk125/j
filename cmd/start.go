@@ -33,7 +33,7 @@ func runStart(cmd *cobra.Command, args []string) error {
 		meta, err := job.ReadMeta(job.MetaPath(args[0]))
 		if err == nil && meta.IsService() {
 			job.RefreshStatus(meta)
-			if meta.Status == "running" {
+			if meta.Status == job.Running {
 				return fmt.Errorf("service %q is already running", args[0])
 			}
 			out, err := exec.Command("systemctl", "--user", "start", meta.ServiceUnit).CombinedOutput()
@@ -84,7 +84,7 @@ func startJob(name, dir string, autoRemove bool, args []string) (string, *job.Me
 		Name:       name,
 		Command:    args,
 		Dir:        dir,
-		Status:     "running",
+		Status:     job.Running,
 		AutoRemove: autoRemove,
 	}
 	if err := job.WriteMeta(job.MetaPath(name), meta); err != nil {
