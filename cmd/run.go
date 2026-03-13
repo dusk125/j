@@ -30,7 +30,12 @@ func init() {
 }
 
 func runRun(cmd *cobra.Command, args []string) error {
-	name, _, err := startJob(runName, runDir, false, runEnv, args)
+	name, _, err := job.Start(args, job.StartOptions{
+		Name:       runName,
+		Dir:        runDir,
+		Env:        runEnv,
+		AutoRemove: false, // handled manually below
+	})
 	if err != nil {
 		return err
 	}
@@ -149,12 +154,12 @@ func foregroundAttach(name string) error {
 					lastCtrlC = time.Now()
 
 					if ctrlCCount >= 3 {
-						signalJob(meta.PID, true)
+						job.SignalJob(meta.PID, true)
 						close(done)
 						writeStr("\r\nKilled job " + name + ".\r\n")
 						detach = true
 					} else {
-						signalJob(meta.PID, false)
+						job.SignalJob(meta.PID, false)
 						remaining := 3 - ctrlCCount
 						writeStr(fmt.Sprintf("\r\nInterrupted. %d more Ctrl+C to kill.\r\n", remaining))
 					}

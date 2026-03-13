@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/dusk125/j/job"
 	"github.com/spf13/cobra"
@@ -25,44 +24,17 @@ func init() {
 
 func runWait(cmd *cobra.Command, args []string) error {
 	name := args[0]
-
-	meta, err := job.ReadMeta(job.MetaPath(name))
+	code, err := job.Wait(name)
 	if err != nil {
-		return fmt.Errorf("job %q not found", name)
+		return err
 	}
 
-	// Already exited
-	if meta.Status != job.Running {
-		if waitAutoRm {
-			job.RemoveJob(name)
-		}
-		return exitWithMeta(meta)
+	if waitAutoRm {
+		job.RemoveJob(name)
 	}
 
-	// Poll until exit
-	for {
-		time.Sleep(100 * time.Millisecond)
-		meta, err = job.ReadMeta(job.MetaPath(name))
-		if err != nil {
-			return fmt.Errorf("reading job state: %w", err)
-		}
-		job.RefreshStatus(meta)
-		if meta.Status != job.Running {
-			if waitAutoRm {
-				job.RemoveJob(name)
-			}
-			return exitWithMeta(meta)
-		}
-	}
-}
-
-func exitWithMeta(meta *job.Meta) error {
-	code := 0
-	if meta.ExitCode != nil {
-		code = *meta.ExitCode
-	}
 	if code != 0 {
-		fmt.Fprintf(os.Stderr, "Job %q exited with code %d\n", meta.Name, code)
+		fmt.Fprintf(os.Stderr, "Job %q exited with code %d\n", name, code)
 	}
 	return exitCodeError{code}
 }

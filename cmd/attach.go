@@ -14,6 +14,10 @@ import (
 	"golang.org/x/term"
 )
 
+func signalJob(pid int, kill bool) {
+	job.SignalJob(pid, kill)
+}
+
 var attachCmd = &cobra.Command{
 	Use:               "attach NAME",
 	Short:             "Attach to a running job's stdin/stdout/stderr",
@@ -148,18 +152,6 @@ func runAttach(cmd *cobra.Command, args []string) error {
 				fifo.Write(buf[written:n])
 			}
 		}
-	}
-}
-
-func signalJob(pid int, kill bool) {
-	proc, err := os.FindProcess(pid)
-	if err != nil {
-		return
-	}
-	if kill {
-		proc.Signal(os.Kill)
-	} else {
-		proc.Signal(os.Interrupt)
 	}
 }
 

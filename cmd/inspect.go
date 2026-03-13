@@ -10,22 +10,18 @@ import (
 )
 
 var inspectCmd = &cobra.Command{
-	Use:   "inspect NAME",
-	Short: "Show detailed job metadata",
+	Use:               "inspect NAME",
+	Short:             "Show detailed job metadata",
 	Args:              cobra.ExactArgs(1),
 	RunE:              runInspect,
 	ValidArgsFunction: completeJobNames(false),
 }
 
 func runInspect(cmd *cobra.Command, args []string) error {
-	name := args[0]
-
-	meta, err := job.ReadMeta(job.MetaPath(name))
+	meta, err := job.Inspect(args[0])
 	if err != nil {
-		return fmt.Errorf("job %q not found", name)
+		return err
 	}
-
-	job.RefreshStatus(meta)
 
 	data, err := json.MarshalIndent(meta, "", "  ")
 	if err != nil {

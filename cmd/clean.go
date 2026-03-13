@@ -14,25 +14,16 @@ var cleanCmd = &cobra.Command{
 }
 
 func runClean(cmd *cobra.Command, args []string) error {
-	jobs, err := job.ListJobs()
+	removed, err := job.Clean()
 	if err != nil {
 		return err
 	}
 
-	var removed int
-	for _, m := range jobs {
-		if m.Status == job.Running || m.IsService() {
-			continue
-		}
-		if err := job.RemoveJob(m.Name); err != nil {
-			fmt.Printf("Failed to remove %q: %v\n", m.Name, err)
-			continue
-		}
-		fmt.Printf("Removed %q\n", m.Name)
-		removed++
+	for _, name := range removed {
+		fmt.Printf("Removed %q\n", name)
 	}
 
-	if removed == 0 {
+	if len(removed) == 0 {
 		fmt.Println("Nothing to clean.")
 	}
 	return nil

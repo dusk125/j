@@ -31,69 +31,21 @@ func init() {
 	manageCmd.Flags().StringVar(&manageName, "name", "", "Job name (default: unit name without .service)")
 }
 
-func unitName(name string) string {
-	if !strings.HasSuffix(name, ".service") {
-		return name + ".service"
-	}
-	return name
-}
-
 func runManage(cmd *cobra.Command, args []string) error {
-	unit := unitName(args[0])
-
-	// Verify the unit exists
-	if err := exec.Command("systemctl", "--user", "cat", unit).Run(); err != nil {
-		return fmt.Errorf("service %q not found (systemctl --user cat %s failed)", unit, unit)
+	meta, err := job.Manage(args[0], manageName)
+	if err != nil {
+		return err
 	}
-
-	name := manageName
-	if name == "" {
-		name = strings.TrimSuffix(unit, ".service")
-	}
-
-	if job.JobExists(name) {
-		return fmt.Errorf("job %q already exists", name)
-	}
-
-	if err := job.EnsureJobsDir(); err != nil {
-		return fmt.Errorf("creating state directory: %w", err)
-	}
-	if err := job.CreateJobDir(name); err != nil {
-		return fmt.Errorf("creating job directory: %w", err)
-	}
-
-	meta := &job.Meta{
-		Name:        name,
-		Command:     []string{unit},
-		ServiceUnit: unit,
-		Status:      job.Running,
-	}
-	job.RefreshStatus(meta)
-
-	if err := job.WriteMeta(job.MetaPath(name), meta); err != nil {
-		return fmt.Errorf("writing metadata: %w", err)
-	}
-
-	fmt.Printf("Managing %s as %q (status: %s)\n", unit, name, meta.Status)
+	fmt.Printf("Managing %s as %q (status: %s)\n", meta.ServiceUnit, meta.Name, meta.Status)
 	return nil
 }
 
 func runUnmanage(cmd *cobra.Command, args []string) error {
-	name := args[0]
-
-	meta, err := job.ReadMeta(job.MetaPath(name))
+	unit, err := job.Unmanage(args[0])
 	if err != nil {
-		return fmt.Errorf("job %q not found", name)
+		return err
 	}
-	if !meta.IsService() {
-		return fmt.Errorf("job %q is not a managed service", name)
-	}
-
-	if err := job.RemoveJob(name); err != nil {
-		return fmt.Errorf("removing job: %w", err)
-	}
-
-	fmt.Printf("Stopped managing %q (%s)\n", name, meta.ServiceUnit)
+	fmt.Printf("Stopped managing %q (%s)\n", args[0], unit)
 	return nil
 }
 
