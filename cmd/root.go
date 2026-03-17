@@ -53,6 +53,7 @@ func init() {
 	rootCmd.AddCommand(waitCmd)
 	rootCmd.AddCommand(eventsCmd)
 	rootCmd.AddCommand(renameCmd)
+	rootCmd.AddCommand(editCmd)
 	rootCmd.AddCommand(manageCmd)
 	rootCmd.AddCommand(unmanageCmd)
 }
