@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/dusk125/j/job"
@@ -41,12 +41,7 @@ func runStop(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	proc, err := os.FindProcess(meta.PID)
-	if err != nil {
-		return fmt.Errorf("finding process: %w", err)
-	}
-
-	if err := proc.Signal(os.Interrupt); err != nil {
+	if err := syscall.Kill(-meta.PID, syscall.SIGINT); err != nil {
 		return fmt.Errorf("sending SIGINT: %w", err)
 	}
 
@@ -59,7 +54,7 @@ func runStop(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("Job %q did not exit within %s, sending SIGKILL\n", name, timeout)
-	if err := proc.Signal(os.Kill); err != nil {
+	if err := syscall.Kill(-meta.PID, syscall.SIGKILL); err != nil {
 		return fmt.Errorf("sending SIGKILL: %w", err)
 	}
 

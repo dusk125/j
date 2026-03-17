@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"github.com/dusk125/j/job"
 	"github.com/spf13/cobra"
@@ -40,12 +40,7 @@ func runKill(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	proc, err := os.FindProcess(meta.PID)
-	if err != nil {
-		return fmt.Errorf("finding process: %w", err)
-	}
-
-	if err := proc.Signal(os.Kill); err != nil {
+	if err := syscall.Kill(-meta.PID, syscall.SIGKILL); err != nil {
 		return fmt.Errorf("sending SIGKILL: %w", err)
 	}
 

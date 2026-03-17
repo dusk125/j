@@ -58,6 +58,7 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 	if len(meta.Env) > 0 {
 		child.Env = append(os.Environ(), meta.Env...)
 	}
+	child.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	child.Stdin = stdinFifo
 
 	stdoutPipe, err := child.StdoutPipe()

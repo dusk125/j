@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"os"
+	"syscall"
 	"time"
 
 	"github.com/dusk125/j/job"
@@ -46,13 +46,11 @@ func runRm(cmd *cobra.Command, args []string) error {
 	if meta.Status == job.Running && rmForce {
 		job.RefreshStatus(meta)
 		if meta.Status == job.Running {
-			if proc, err := os.FindProcess(meta.PID); err == nil {
-				proc.Signal(os.Interrupt)
-				timeout := 5 * time.Second
-				if !waitForProcessExit(name, timeout) {
-					proc.Signal(os.Kill)
-					waitForProcessExit(name, 0)
-				}
+			syscall.Kill(-meta.PID, syscall.SIGINT)
+			timeout := 5 * time.Second
+			if !waitForProcessExit(name, timeout) {
+				syscall.Kill(-meta.PID, syscall.SIGKILL)
+				waitForProcessExit(name, 0)
 			}
 		}
 	}
