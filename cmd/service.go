@@ -28,7 +28,7 @@ var unmanageCmd = &cobra.Command{
 }
 
 func init() {
-	manageCmd.Flags().StringVar(&manageName, "name", "", "Job name (default: unit name without .service)")
+	manageCmd.Flags().StringVarP(&manageName, "name", "n", "", "Job name (default: unit name without .service)")
 }
 
 func unitName(name string) string {

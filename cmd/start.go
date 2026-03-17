@@ -23,8 +23,8 @@ var startAutoRm bool
 var startEnv []string
 
 func init() {
-	startCmd.Flags().StringVar(&startName, "name", "", "Job name (auto-generated if empty)")
-	startCmd.Flags().StringVar(&startDir, "dir", "", "Working directory (default: current directory)")
+	startCmd.Flags().StringVarP(&startName, "name", "n", "", "Job name (auto-generated if empty)")
+	startCmd.Flags().StringVarP(&startDir, "dir", "d", "", "Working directory (default: current directory)")
 	startCmd.Flags().BoolVar(&startAutoRm, "rm", false, "Remove job after it exits")
 	startCmd.Flags().StringArrayVarP(&startEnv, "env", "e", nil, "Set environment variables (KEY=VALUE)")
 }

@@ -21,7 +21,7 @@ var eventsCmd = &cobra.Command{
 var eventsSince string
 
 func init() {
-	eventsCmd.Flags().StringVar(&eventsSince, "since", "1h", "Show events within this duration (e.g. 30m, 2h, 24h)")
+	eventsCmd.Flags().StringVarP(&eventsSince, "since", "s", "1h", "Show events within this duration (e.g. 30m, 2h, 24h)")
 }
 
 func runEvents(cmd *cobra.Command, args []string) error {

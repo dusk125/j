@@ -20,7 +20,7 @@ var rmCmd = &cobra.Command{
 var rmForce bool
 
 func init() {
-	rmCmd.Flags().BoolVar(&rmForce, "force", false, "Force remove (even if running)")
+	rmCmd.Flags().BoolVarP(&rmForce, "force", "f", false, "Force remove (even if running)")
 }
 
 func runRm(cmd *cobra.Command, args []string) error {

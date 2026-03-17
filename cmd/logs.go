@@ -29,7 +29,7 @@ func init() {
 	logsCmd.Flags().BoolVarP(&logsFollow, "follow", "f", false, "Follow log output")
 	logsCmd.Flags().BoolVar(&logsStdout, "stdout", false, "Show only stdout")
 	logsCmd.Flags().BoolVar(&logsStderr, "stderr", false, "Show only stderr")
-	logsCmd.Flags().IntVar(&logsTail, "tail", 0, "Number of lines to show from the end")
+	logsCmd.Flags().IntVarP(&logsTail, "tail", "n", 0, "Number of lines to show from the end")
 }
 
 func runLogs(cmd *cobra.Command, args []string) error {

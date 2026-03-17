@@ -23,8 +23,8 @@ var runAutoRm bool
 var runEnv []string
 
 func init() {
-	runCmd.Flags().StringVar(&runName, "name", "", "Job name (auto-generated if empty)")
-	runCmd.Flags().StringVar(&runDir, "dir", "", "Working directory (default: current directory)")
+	runCmd.Flags().StringVarP(&runName, "name", "n", "", "Job name (auto-generated if empty)")
+	runCmd.Flags().StringVarP(&runDir, "dir", "d", "", "Working directory (default: current directory)")
 	runCmd.Flags().BoolVar(&runAutoRm, "rm", false, "Remove job after it exits")
 	runCmd.Flags().StringArrayVarP(&runEnv, "env", "e", nil, "Set environment variables (KEY=VALUE)")
 }
