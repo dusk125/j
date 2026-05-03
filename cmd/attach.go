@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/dusk125/j/job"
@@ -58,11 +59,7 @@ func runAttach(cmd *cobra.Command, args []string) error {
 	}
 	defer term.Restore(fd, oldState)
 
-	writeStr := func(s string) {
-		os.Stdout.WriteString(s)
-	}
-
-	writeStr("Attached to job " + name + ". Ctrl+Q: detach | Ctrl+C: interrupt (x3 to kill)\r\n")
+	fmt.Fprint(os.Stdout, "Attached to job "+name+". Ctrl+Q: detach | Ctrl+C: interrupt (x3 to kill)\r\n")
 
 	done := make(chan struct{})
 	jobExited := make(chan int, 1)
@@ -78,7 +75,7 @@ func runAttach(cmd *cobra.Command, args []string) error {
 		select {
 		case code := <-jobExited:
 			close(done)
-			writeStr(fmt.Sprintf("\r\nJob exited with code %d.\r\n", code))
+			fmt.Fprintf(os.Stdout, "\r\nJob exited with code %d.\r\n", code)
 			return nil
 		default:
 		}
@@ -92,12 +89,12 @@ func runAttach(cmd *cobra.Command, args []string) error {
 		select {
 		case code := <-jobExited:
 			close(done)
-			writeStr(fmt.Sprintf("\r\nJob exited with code %d.\r\n", code))
+			fmt.Fprintf(os.Stdout, "\r\nJob exited with code %d.\r\n", code)
 			return nil
 		case r := <-readCh:
 			if r.err != nil {
 				close(done)
-				writeStr("\r\nDetached from job " + name + ".\r\n")
+				fmt.Fprintf(os.Stdout, "\r\nDetached from job %v.\r\n", name)
 				return nil
 			}
 			n := r.n
@@ -111,7 +108,7 @@ func runAttach(cmd *cobra.Command, args []string) error {
 						fifo.Write(buf[written:i])
 					}
 					close(done)
-					writeStr("\r\nDetached from job " + name + ".\r\n")
+					fmt.Fprintf(os.Stdout, "\r\nDetached from job %v.\r\n", name)
 					return nil
 
 				case 0x03: // Ctrl+C — interrupt / kill
@@ -129,12 +126,12 @@ func runAttach(cmd *cobra.Command, args []string) error {
 					if ctrlCCount >= 3 {
 						signalJob(meta.PID, true)
 						close(done)
-						writeStr("\r\nKilled job " + name + ".\r\n")
+						fmt.Fprintf(os.Stdout, "\r\nKilled job %v.\r\n", name)
 						detach = true
 					} else {
 						signalJob(meta.PID, false)
 						remaining := 3 - ctrlCCount
-						writeStr(fmt.Sprintf("\r\nInterrupted. %d more Ctrl+C to kill.\r\n", remaining))
+						fmt.Fprintf(os.Stdout, "\r\nInterrupted. %d more Ctrl+C to kill.\r\n", remaining)
 					}
 				}
 				if detach {
@@ -152,15 +149,11 @@ func runAttach(cmd *cobra.Command, args []string) error {
 }
 
 func signalJob(pid int, kill bool) {
-	proc, err := os.FindProcess(pid)
-	if err != nil {
-		return
-	}
+	sig := syscall.SIGINT
 	if kill {
-		proc.Signal(os.Kill)
-	} else {
-		proc.Signal(os.Interrupt)
+		sig = syscall.SIGKILL
 	}
+	syscall.Kill(-pid, sig)
 }
 
 // attachFollowUntilExit streams log lines and signals jobExited when the job finishes.
