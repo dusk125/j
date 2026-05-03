@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"github.com/dusk125/j/job"
 	"github.com/spf13/cobra"
@@ -104,7 +105,7 @@ func startJob(name, dir string, autoRemove bool, env []string, args []string) (s
 	supervisor.Stdin = nil
 	supervisor.Stdout = nil
 	supervisor.Stderr = nil
-	supervisor.SysProcAttr = sysProcAttr()
+	supervisor.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 
 	if err := supervisor.Start(); err != nil {
 		job.RemoveJob(name)

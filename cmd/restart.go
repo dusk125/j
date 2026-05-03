@@ -2,10 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/dusk125/j/job"
 	"github.com/spf13/cobra"
@@ -36,39 +34,10 @@ func runRestart(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// If still running, stop it first
-	if meta.Status == job.Running {
-		job.RefreshStatus(meta)
-	}
-	if meta.Status == job.Running {
-		proc, err := os.FindProcess(meta.PID)
-		if err != nil {
-			return fmt.Errorf("finding process: %w", err)
-		}
-		proc.Signal(os.Interrupt)
-		fmt.Printf("Stopping job %q...\n", name)
-
-		// Wait up to 5 seconds for graceful exit
-		for range 50 {
-			time.Sleep(100 * time.Millisecond)
-			meta, _ = job.ReadMeta(job.MetaPath(name))
-			if meta.Status != job.Running {
-				break
-			}
-			job.RefreshStatus(meta)
-			if meta.Status != job.Running {
-				break
-			}
-		}
-
-		// Force kill if still running
-		if meta.Status == job.Running {
-			proc.Signal(os.Kill)
-			time.Sleep(200 * time.Millisecond)
-		}
+	if err := stopJob(name); err != nil {
+		return err
 	}
 
-	// Save config before removing
 	command := meta.Command
 	dir := meta.Dir
 	env := meta.Env

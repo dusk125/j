@@ -32,6 +32,23 @@ func runStop(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("job %q is not running (status: %s)", name, meta.Status)
 	}
 
+	return stopJob(name)
+}
+
+// stopJob sends SIGINT to a running job, escalating to SIGKILL after 5s.
+// For managed services, runs `systemctl --user stop`. Returns nil if the
+// job is not running.
+func stopJob(name string) error {
+	meta, err := job.ReadMeta(job.MetaPath(name))
+	if err != nil {
+		return fmt.Errorf("job %q not found", name)
+	}
+
+	job.RefreshStatus(meta)
+	if meta.Status != job.Running {
+		return nil
+	}
+
 	if meta.IsService() {
 		out, err := exec.Command("systemctl", "--user", "stop", meta.ServiceUnit).CombinedOutput()
 		if err != nil {

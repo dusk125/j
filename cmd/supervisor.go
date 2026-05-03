@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"syscall"
@@ -60,18 +59,10 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 	}
 	child.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	child.Stdin = stdinFifo
+	child.Stdout = stdoutLog
+	child.Stderr = stderrLog
 
-	stdoutPipe, err := child.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("creating stdout pipe: %w", err)
-	}
-	stderrPipe, err := child.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("creating stderr pipe: %w", err)
-	}
-
-	now := time.Now()
-	meta.StartedAt = now
+	meta.StartedAt = time.Now()
 
 	if err := child.Start(); err != nil {
 		meta.Status = job.Failed
@@ -83,21 +74,6 @@ func runSupervisor(cmd *cobra.Command, args []string) error {
 	meta.PID = child.Process.Pid
 	meta.SupervisorPID = os.Getpid()
 	job.WriteMeta(job.MetaPath(name), meta)
-
-	// Copy output in goroutines
-	done := make(chan struct{}, 2)
-	go func() {
-		io.Copy(stdoutLog, stdoutPipe)
-		done <- struct{}{}
-	}()
-	go func() {
-		io.Copy(stderrLog, stderrPipe)
-		done <- struct{}{}
-	}()
-
-	// Wait for both pipes to close
-	<-done
-	<-done
 
 	err = child.Wait()
 	meta.EndedAt = time.Now()
